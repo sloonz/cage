@@ -9,9 +9,12 @@
 #include <wlr/types/wlr_output_layout.h>
 #include <wlr/types/wlr_relative_pointer_v1.h>
 #include <wlr/types/wlr_xdg_decoration_v1.h>
+#include <wlr/backend/wayland.h>
 #if CAGE_HAS_XWAYLAND
 #include <wlr/xwayland.h>
 #endif
+
+struct cg_clipboard_sync;
 
 enum cg_multi_output_mode {
 	CAGE_MULTI_OUTPUT_MODE_EXTEND,
@@ -25,6 +28,12 @@ struct cg_server {
 	struct wlr_renderer *renderer;
 	struct wlr_allocator *allocator;
 	struct wlr_session *session;
+
+	struct wlr_backend *wl_backend;
+	struct wl_display *remote_display;
+	struct wl_seat *remote_seat;
+	struct zwlr_data_control_manager_v1 *remote_data_control_manager;
+	struct cg_clipboard_sync *remote_clipboard_sync;
 
 	struct cg_seat *seat;
 	struct wlr_idle_notifier_v1 *idle;

@@ -39,6 +39,7 @@
 #include "seat.h"
 #include "server.h"
 #include "view.h"
+#include "clipboard_sync.h"
 #if CAGE_HAS_XWAYLAND
 #include "xwayland.h"
 #endif
@@ -465,6 +466,7 @@ handle_request_set_selection(struct wl_listener *listener, void *data)
 	struct cg_seat *seat = wl_container_of(listener, seat, request_set_selection);
 	struct wlr_seat_request_set_selection_event *event = data;
 
+	clipboard_sync_handle_set_selection(seat->server, event->source);
 	wlr_seat_set_selection(seat->seat, event->source, event->serial);
 }
 
