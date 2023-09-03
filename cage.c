@@ -49,7 +49,10 @@
 #include <wlr/util/log.h>
 #if CAGE_HAS_XWAYLAND
 #include <wlr/xwayland.h>
+#include <wlr/backend/multi.h>
 #endif
+
+#include "wlr-data-control-unstable-v1-client-protocol.h"
 
 #include "idle_inhibit_v1.h"
 #include "output.h"
@@ -57,6 +60,7 @@
 #include "server.h"
 #include "view.h"
 #include "xdg_shell.h"
+#include "clipboard_sync.h"
 #if CAGE_HAS_XWAYLAND
 #include "xwayland.h"
 #endif
@@ -275,6 +279,49 @@ parse_args(struct cg_server *server, int argc, char *argv[])
 	return true;
 }
 
+static void test_backend(struct wlr_backend *backend, void *data) {
+	struct wlr_backend **wl_backend_ptr = data;
+
+	if(wlr_backend_is_wl(backend)) {
+		*wl_backend_ptr = backend;
+	}
+}
+
+static void *find_wl_backend(struct wlr_backend *backend) {
+	struct wlr_wl_backend *wl_backend = NULL;
+
+	if(wlr_backend_is_wl(backend)) {
+		return backend;
+	} else if(wlr_backend_is_multi(backend)) {
+		wlr_multi_for_each_backend(backend, test_backend, &wl_backend);
+	}
+
+	return wl_backend;
+}
+
+static void noop() {}
+
+static void handle_remote_registry_global(void *data, struct wl_registry *reg, uint32_t name, const char *interface, uint32_t version) {
+	struct cg_server *server = data;
+
+	if(strcmp(interface, zwlr_data_control_manager_v1_interface.name) == 0) {
+		server->remote_data_control_manager = wl_registry_bind(reg, name, &zwlr_data_control_manager_v1_interface, 2);
+	}
+
+	if(strcmp(interface, wl_seat_interface.name) == 0) {
+		if(server->remote_seat != NULL) {
+			wlr_log(WLR_ERROR, "Multiple seats is not supported");
+			return;
+		}
+		server->remote_seat = wl_registry_bind(reg, name, &wl_seat_interface, 8);
+	}
+}
+
+static struct wl_registry_listener remote_registry_listener = {
+	.global = handle_remote_registry_global,
+	.global_remove = noop,
+};
+
 int
 main(int argc, char *argv[])
 {
@@ -397,6 +444,16 @@ main(int argc, char *argv[])
 		wlr_log(WLR_ERROR, "Unable to create the seat");
 		ret = 1;
 		goto end;
+	}
+
+	server.wl_backend = find_wl_backend(server.backend);
+	if(server.wl_backend != NULL) {
+		server.remote_display = wlr_wl_backend_get_remote_display(server.wl_backend);
+		struct wl_registry *remote_registry = wl_display_get_registry(server.remote_display);
+		wl_registry_add_listener(remote_registry, &remote_registry_listener, &server);
+		wl_display_roundtrip(server.remote_display);
+
+		clipboard_sync_init(&server);
 	}
 
 	server.idle = wlr_idle_notifier_v1_create(server.wl_display);

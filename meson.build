@@ -38,6 +38,7 @@ endif
 wlroots        = dependency('wlroots-0.18', fallback: ['wlroots', 'wlroots'])
 wayland_protos = dependency('wayland-protocols', version: '>=1.14')
 wayland_server = dependency('wayland-server')
+wayland_client = dependency('wayland-client')
 xkbcommon      = dependency('xkbcommon')
 math           = cc.find_library('m')
 
@@ -48,21 +49,28 @@ wayland_scanner_server = generator(
   output: '@BASENAME@-protocol.h',
   arguments: ['server-header', '@INPUT@', '@OUTPUT@'],
 )
+wayland_scanner_client = generator(
+  wayland_scanner,
+  output: '@BASENAME@-client-protocol.h',
+  arguments: ['client-header', '@INPUT@', '@OUTPUT@'],
+)
+wayland_scanner_code = generator(
+  wayland_scanner,
+  output: '@BASENAME@-protocol.c',
+  arguments: ['private-code', '@INPUT@', '@OUTPUT@'],
+)
 
 server_protocols = [
-  [wl_protocol_dir, 'stable/xdg-shell/xdg-shell.xml'],
+  [wl_protocol_dir / 'stable/xdg-shell/xdg-shell.xml'],
+  ['protocol/wlr-data-control-unstable-v1.xml'],
 ]
 
-server_protos_headers = []
-
-foreach p : server_protocols
-  xml = join_paths(p)
-  server_protos_headers += wayland_scanner_server.process(xml)
+protos_src = []
+foreach xml : server_protocols
+  protos_src += wayland_scanner_code.process(xml)
+  protos_src += wayland_scanner_client.process(xml)
+  protos_src += wayland_scanner_server.process(xml)
 endforeach
-
-server_protos = declare_dependency(
-  sources: server_protos_headers,
-)
 
 have_xwayland = wlroots.get_variable(pkgconfig: 'have_xwayland', internal: 'have_xwayland') == 'true'
 
@@ -117,6 +125,7 @@ cage_sources = [
   'seat.c',
   'view.c',
   'xdg_shell.c',
+  'clipboard_sync.c',
 ]
 
 cage_headers = [
@@ -129,6 +138,7 @@ cage_headers = [
   'server.h',
   'view.h',
   'xdg_shell.h',
+  'clipboard_sync.h',
 ]
 
 if conf_data.get('CAGE_HAS_XWAYLAND', 0) == 1
@@ -138,10 +148,10 @@ endif
 
 executable(
   meson.project_name(),
-  cage_sources + cage_headers,
+  cage_sources + cage_headers + protos_src,
   dependencies: [
-    server_protos,
     wayland_server,
+    wayland_client,
     wlroots,
     xkbcommon,
     math,
