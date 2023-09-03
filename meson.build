@@ -63,6 +63,7 @@ wayland_scanner_code = generator(
 server_protocols = [
   [wl_protocol_dir / 'stable/xdg-shell/xdg-shell.xml'],
   ['protocol/wlr-data-control-unstable-v1.xml'],
+  [wl_protocol_dir / 'unstable/pointer-constraints/pointer-constraints-unstable-v1.xml'],
 ]
 
 protos_src = []
@@ -134,6 +135,7 @@ cage_sources = [
   'view.c',
   'xdg_shell.c',
   'clipboard_sync.c',
+  'pointer_constraints.c',
 ]
 
 cage_headers = [
@@ -147,6 +149,7 @@ cage_headers = [
   'view.h',
   'xdg_shell.h',
   'clipboard_sync.h',
+  'pointer_constraints.h',
 ]
 
 if conf_data.get('CAGE_HAS_XWAYLAND', 0) == 1

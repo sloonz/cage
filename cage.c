@@ -51,6 +51,7 @@
 #include <wlr/backend/multi.h>
 #endif
 
+#include "pointer-constraints-unstable-v1-protocol.h"
 #include "wlr-data-control-unstable-v1-client-protocol.h"
 
 #include "idle_inhibit_v1.h"
@@ -60,6 +61,7 @@
 #include "view.h"
 #include "xdg_shell.h"
 #include "clipboard_sync.h"
+#include "pointer_constraints.h"
 #if CAGE_HAS_XWAYLAND
 #include "xwayland.h"
 #endif
@@ -290,6 +292,10 @@ static void handle_remote_registry_global(void *data, struct wl_registry *reg, u
 		server->remote_data_control_manager = wl_registry_bind(reg, name, &zwlr_data_control_manager_v1_interface, 2);
 	}
 
+	if(strcmp(interface, zwp_pointer_constraints_v1_interface.name) == 0) {
+		server->remote_pointer_constraints = wl_registry_bind(reg, name, &zwp_pointer_constraints_v1_interface, 1);
+	}
+
 	if(strcmp(interface, wl_seat_interface.name) == 0) {
 		if(server->remote_seat != NULL) {
 			wlr_log(WLR_ERROR, "Multiple seats is not supported");
@@ -428,6 +434,7 @@ main(int argc, char *argv[])
 		wl_registry_add_listener(remote_registry, &remote_registry_listener, &server);
 		wl_display_roundtrip(server.remote_display);
 
+		setup_pointer_constraints(&server);
 		clipboard_sync_init(&server);
 	}
 
