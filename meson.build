@@ -128,6 +128,7 @@ cage_sources = [
   'xdg_shell.c',
   'clipboard_sync.c',
   'pointer_constraints.c',
+  'ipc.c',
 ]
 
 cage_headers = [
@@ -142,6 +143,7 @@ cage_headers = [
   'xdg_shell.h',
   'clipboard_sync.h',
   'pointer_constraints.h',
+  'ipc.h',
 ]
 
 if conf_data.get('CAGE_HAS_XWAYLAND', 0) == 1
