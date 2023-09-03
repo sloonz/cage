@@ -7,10 +7,13 @@
 #include "server.h"
 #include "view.h"
 
+#define FORCED_REFRESH_DELAY 7 /* milliseconds, ~144 Hz */
+
 struct cg_output {
 	struct cg_server *server;
 	struct wlr_output *wlr_output;
 	struct wlr_scene_output *scene_output;
+	struct wl_event_source *timer;
 
 	struct wl_listener commit;
 	struct wl_listener request_state;

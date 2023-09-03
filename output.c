@@ -30,6 +30,7 @@
 #include <wlr/types/wlr_output_management_v1.h>
 #include <wlr/types/wlr_scene.h>
 #include <wlr/types/wlr_xdg_shell.h>
+#include <wlr/interfaces/wlr_output.h>
 #include <wlr/util/log.h>
 #include <wlr/util/region.h>
 
@@ -161,6 +162,8 @@ handle_output_frame(struct wl_listener *listener, void *data)
 {
 	struct cg_output *output = wl_container_of(listener, output, frame);
 
+	wl_event_source_timer_update(output->timer, 0);
+
 	if (!output->wlr_output->enabled || !output->scene_output) {
 		return;
 	}
@@ -185,6 +188,8 @@ handle_output_commit(struct wl_listener *listener, void *data)
 	if (event->state->committed & OUTPUT_CONFIG_UPDATED) {
 		update_output_manager_config(output->server);
 	}
+
+	wl_event_source_timer_update(output->timer, FORCED_REFRESH_DELAY);
 }
 
 static void
@@ -196,6 +201,21 @@ handle_output_request_state(struct wl_listener *listener, void *data)
 	if (wlr_output_commit_state(output->wlr_output, event->state)) {
 		update_output_manager_config(output->server);
 	}
+}
+
+static int handle_frame_timeout(void *data)
+{
+	struct cg_output *output = data;
+
+	if (!output->wlr_output->enabled) {
+		return 0;
+	}
+
+	if (output->server->force_refresh) {
+		wlr_output_send_frame(output->wlr_output);
+	}
+
+	return 0;
 }
 
 void
@@ -234,6 +254,7 @@ output_destroy(struct cg_output *output)
 	wl_list_remove(&output->request_state.link);
 	wl_list_remove(&output->frame.link);
 	wl_list_remove(&output->link);
+	wl_event_source_remove(output->timer);
 
 	output_layout_remove(output);
 
@@ -271,6 +292,9 @@ handle_new_output(struct wl_listener *listener, void *data)
 		wlr_log(WLR_ERROR, "Failed to allocate output");
 		return;
 	}
+
+	output->timer = wl_event_loop_add_timer(wl_display_get_event_loop(server->wl_display),
+				handle_frame_timeout, output);
 
 	output->wlr_output = wlr_output;
 	wlr_output->data = output;
