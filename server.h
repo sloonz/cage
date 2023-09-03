@@ -36,6 +36,7 @@ struct cg_server {
 	struct wl_display *remote_display;
 	struct wl_seat *remote_seat;
 	struct zwlr_data_control_manager_v1 *remote_data_control_manager;
+	struct zwp_pointer_constraints_v1 *remote_pointer_constraints;
 	struct cg_clipboard_sync *remote_clipboard_sync;
 
 	struct cg_seat *seat;
