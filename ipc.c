@@ -7,9 +7,12 @@
 
 #include "ipc.h"
 #include "server.h"
+#include "output.h"
 #include "seat.h"
 
 static const char GET_CURSOR_POS[] = "get_cursor_pos";
+static const char ENABLE_FORCE_REFRESH[] = "enable_force_refresh";
+static const char DISABLE_FORCE_REFRESH[] = "disable_force_refresh";
 static const char INVALID_COMMAND[] = "invalid_command";
 
 struct cg_ipc_client {
@@ -97,7 +100,16 @@ static void ipc_client_handle_message(struct cg_ipc_client *client, char *messag
 		uint32_t y = client->server->seat->cursor->y;
 		uint32_t pos[2] = {x, y};
 		ipc_client_write(client, (char*)&pos[0], sizeof(pos));
+	} else if(!strncmp(message, ENABLE_FORCE_REFRESH, sizeof(ENABLE_FORCE_REFRESH)-1)) {
+		client->server->force_refresh = true;
+		struct cg_output *output;
+		wl_list_for_each (output, &client->server->outputs, link) {
+			wl_event_source_timer_update(output->timer, FORCED_REFRESH_DELAY);
+		}
+	} else if(!strncmp(message, DISABLE_FORCE_REFRESH, sizeof(DISABLE_FORCE_REFRESH)-1)) {
+		client->server->force_refresh = false;
 	} else {
+		wlr_log(WLR_ERROR, "IPC invalid command");
 		ipc_client_write(client, INVALID_COMMAND, sizeof(INVALID_COMMAND)-1);
 	}
 }
