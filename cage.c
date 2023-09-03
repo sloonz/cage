@@ -62,6 +62,7 @@
 #include "xdg_shell.h"
 #include "clipboard_sync.h"
 #include "pointer_constraints.h"
+#include "ipc.h"
 #if CAGE_HAS_XWAYLAND
 #include "xwayland.h"
 #endif
@@ -631,6 +632,7 @@ main(int argc, char *argv[])
 	}
 
 	seat_center_cursor(server.seat);
+	ipc_init(&server);
 	wl_display_run(server.wl_display);
 
 #if CAGE_HAS_XWAYLAND
