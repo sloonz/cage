@@ -77,6 +77,7 @@ struct cg_server {
 	bool terminated;
 	enum wlr_log_importance log_level;
 	bool force_refresh;
+	const char *app_id;
 };
 
 void server_terminate(struct cg_server *server);
